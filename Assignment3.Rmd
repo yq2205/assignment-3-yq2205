@@ -1,0 +1,189 @@
+---
+title: "Assignment3"
+author: "yq2205"
+date: "10/24/2017"
+output: html_document
+---
+```{r}
+
+```
+
+```{r}
+install.packages("ggplot2") #If this doesn't work, use the "Packages" tab to install the package.
+
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+```{r}
+K1<-read.csv("Class_Motivation.csv")
+K2<-dplyr::select(K1, 2:6)
+```
+#It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
+#if there are a lot missing values, simply removing all of them can result in a smaller and biased sample size. For biased, people may skip the question for multiple reasons, while removing missing values does not take these reasons into considerations. For example, if people skip the question asking their annual income, he propabably are very sensitive of telling other about his income. In some cases, he could be very poor. Therefore, remove the missing data may rise the mean of annual income.
+
+#remove the missing value
+```{r}
+K3 <- na.omit(K2) 
+#This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
+```
+#Another pre-processing step used in K-means is to standardize the values so that they have the same range. We do this because we want to treat each week as equally important - if we do not standardise then the week with the largest range will have the greatest impact on which clusters are formed. We standardise the values by using the "scales()" command.
+```{r}
+K3 <- scale(K3)
+```
+
+```{r}
+fit <- kmeans(K3, 2) 
+
+#We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
+
+#We can access the list of clusters by typing "fit$cluster", the top row corresponds to the original order the rows were in. Notice we have deleted some rows.
+
+fit$cluster
+
+#We can also attach these clusters to te original dataframe by using the "data.frame" command to create a new data frame called K4.
+
+K4 <- data.frame(K3, fit$cluster)
+
+#Have a look at the K4 dataframe. Lets change the names of the variables to make it more convenient with the names() command.
+
+names(K4) <- c("1", "2", "3", "4", "5", "cluster") 
+#c() stands for concatonate and it creates a vector of anything, in this case a vector of names.
+
+
+```
+#First lets use tidyr to convert from wide to long format.
+```{r}
+K5 <- tidyr::gather(K4, "week", "motivation", 1:5)
+```
+#Now lets use dplyr to average our motivation values by week and by cluster.
+```{r}
+K6 <- K5 %>% group_by(week, cluster)
+K6 <- summarise(K6, avg = mean(motivation))
+```
+#convert it from an "integer" format to a "factor" format so that ggplot does not treat it as a number
+```{r}
+K6$week <- as.numeric(K6$week)
+
+K6$cluster <- as.factor(K6$cluster)
+
+```
+
+```{r}
+ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+# what patterns do you see in this plot?
+#I see the two lines are almost symmetric. In other words, when cluster 1 is on the ris e of motivation, cluster 2 is on the decline.
+```
+
+#It would be useful to determine how many people are in each cluster. We can do this easily with dplyr.
+
+```{r}
+K7 <- dplyr::count(K4, cluster)
+```
+
+# Repeat the process for 3 rather than 2 clusters.
+```{r}
+fit2<-kmeans(K3, 3)
+fit2$cluster
+C1<-data.frame(K3, fit2$cluster)
+names(C1)<-c("1","2","3","4","5","cluster")
+C2<-tidyr::gather (C1, "week", "motivation", 1:5)
+C3<- C2 %>% group_by(week, cluster)
+C3<- summarise(C3, avg=mean(motivation))
+C3$week <- as.numeric(C3$week)
+C3$cluster <-as.factor(C3$cluster)
+ggplot(C3, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+C4<-dplyr::count(C3, cluster)
+
+```
+#Three groups are better. As shown in the above plot, there are three different trends, which implies three groups of students have different trends of motivation patterns over time. 
+
+
+##Part II
+# cluster by group of answers
+# I decided to cluster the data into two groups since many o yes-or-no. For some answers, although the values are not 0 or 1, they are different to a large extent.
+```{r}
+D1<-read.csv("cluster-class-data.csv")
+D2<-dplyr::select(D1, starts_with("Q"))
+D2<-dplyr::select(D2,-QID1_TEXT,-QID2_TEXT, -QID14_TEXT, -QID16_TEXT,-QID17_TEXT)
+```
+# recode the dataset
+```{r}
+D2$QID3 <- ifelse(D2$QID3== "Yes", "1", "0") 
+D2$QID4 <- ifelse(D2$QID4== "g-iff", "1", "0") 
+```
+#scale
+```{r}
+D2$QID3<-as.numeric(D2$QID3)
+D2$QID4<-as.numeric(D2$QID4)
+D3<-scale(D2)
+```
+# Try 2 clusters
+```{r}
+fit3<-kmeans(D3, 2)
+fit3$cluster
+D4<-data.frame(D3, fit3$cluster)
+
+```
+```{r}
+names(D4)<-c("1","2","3","4","5","6","7","8","9","10", "cluster")
+D5<-tidyr::gather(D4, "question","answer",1:10)
+#average the answers by questions and by cluster
+D6<- D5%>%group_by(question, cluster)
+D6<-summarise(D6, avg=mean(answer))
+```
+#convert format
+```{r}
+D6$question<-as.numeric(D6$question)
+D6$cluster<-as.factor(D6$cluster)
+```
+#plot
+```{r}
+ggplot( D6, aes(question, avg, colour=cluster))+geom_line()+xlab("Questions")+ylab("Average Answer")
+```
+#Group by regions
+
+```{r}
+A1<-dplyr::select(D1,"QID14_TEXT","QID16_TEXT","QID17_TEXT" )
+names(A1)<-c("city","province","country")
+```
+
+```{r}
+install.packages("ggmap")
+```
+```{r}
+library("ggmap")
+```
+```{r}
+#use ggmap to get the location information of the home cities
+A2<- geocode(as.character(A1$city),output="latlon")
+row.names(A2)<- c("2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22")
+```
+```{r}
+#cluster and rename
+A3 <- kmeans(A2,2)
+A2<- data.frame(A2,A3$cluster)
+names(A2) <- c("lon","lat","cluster")
+
+```
+```{r}
+#visualize the data
+
+A3<- tidyr::gather(A2, "location","geoinfo", 1:2)
+A4<- A3 %>% group_by(location, cluster)
+A5<- summarise(A4, avg=mean(geoinfo))
+A5$cluster <- as.factor(A5$cluster)
+ggplot(A5,aes(location, avg, colour=cluster))+geom_line()
+```
+#Part III Create a visualization that shows the overlap between two groups of clusters you created in partIII.
+```{r}
+
+```
+
+
+
+
+
+
+
