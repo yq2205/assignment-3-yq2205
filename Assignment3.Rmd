@@ -162,7 +162,7 @@ row.names(A2)<- c("2","3","4","5","6","7","8","9","10","11","12","13","14","15",
 ```
 ```{r}
 #cluster and rename
-A3 <- kmeans(A2,2)
+A3 <- kmeans(A2,3)
 A2<- data.frame(A2,A3$cluster)
 names(A2) <- c("lon","lat","cluster")
 
@@ -174,7 +174,7 @@ A3<- tidyr::gather(A2, "location","geoinfo", 1:2)
 A4<- A3 %>% group_by(location, cluster)
 A5<- summarise(A4, avg=mean(geoinfo))
 A5$cluster <- as.factor(A5$cluster)
-ggplot(A5,aes(location, avg, colour=cluster))+geom_line()
+ggplot(A5,aes(location, avg, colour=cluster))+geom_dotplot()
 ```
 #Part III Create a visualization that shows the overlap between two groups of clusters you created in partIII.
 ```{r}
